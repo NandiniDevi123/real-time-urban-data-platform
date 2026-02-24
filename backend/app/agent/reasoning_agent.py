@@ -1,19 +1,20 @@
 import re
 from typing import List
+
 from backend.app.schemas.agent_models import ToolCall
 
+
 class ReasoningAgent:
-    """
-    Minimal agent:
-    1) Detect intent from user query
-    2) Build a tool-call plan (placeholder for now)
-    """
 
     def detect_intent(self, query: str) -> str:
         q = query.lower()
 
-        has_weather = any(w in q for w in ["weather", "temperature", "temp", "forecast", "rain", "snow", "humidity", "wind"])
-        has_aqi = any(w in q for w in ["aqi", "air quality", "pollution", "pm2.5", "pm10", "o3", "no2", "smoke"])
+        has_weather = any(
+            w in q for w in ["weather", "temperature", "temp", "forecast", "rain", "snow", "humidity", "wind"]
+        )
+        has_aqi = any(
+            w in q for w in ["aqi", "air quality", "pollution", "pm2.5", "pm10", "o3", "no2", "smoke"]
+        )
 
         if has_weather and has_aqi:
             return "combined"
@@ -24,11 +25,6 @@ class ReasoningAgent:
         return "general"
 
     def extract_location_hint(self, query: str) -> str:
-        """
-        Simple placeholder location extraction.
-        For now: if user writes 'in <place>' or 'at <place>', capture it.
-        This will improve later with a proper geocoding tool.
-        """
         m = re.search(r"\b(in|at)\s+([a-zA-Z\s]+)$", query.strip(), re.IGNORECASE)
         if m:
             return m.group(2).strip()
@@ -49,16 +45,29 @@ class ReasoningAgent:
                 ToolCall(tool_name="get_aqi", arguments={"location": location}),
             ]
 
-        return []  # general chat: no tools
+        return []
 
     def respond(self, query: str):
         intent = self.detect_intent(query)
         plan = self.build_plan(intent, query)
+        location = self.extract_location_hint(query)
 
-        # Placeholder response (later it will call tools and summarize results)
         if intent == "general":
-            msg = "This request doesn’t look like weather or air quality. Ask for weather, AQI, or both (example: 'weather and AQI in Detroit')."
-        else:
-            msg = f"Intent detected: {intent}. Tool plan created (next step is executing tools)."
+            message = "Please ask for weather, AQI, or both. Example: 'weather and AQI in Detroit'."
 
-        return intent, plan, msg
+        elif location == "unknown":
+            message = "Please provide a city name so I can retrieve weather or AQI data."
+
+        elif intent == "weather":
+            message = f"I will retrieve weather data for {location}. Next step: call get_weather tool."
+
+        elif intent == "aqi":
+            message = f"I will retrieve air quality (AQI) data for {location}. Next step: call get_aqi tool."
+
+        else:
+            message = (
+                f"I will retrieve both weather and AQI data for {location}. "
+                "Next step: call get_weather and get_aqi tools."
+            )
+
+        return intent, plan, message

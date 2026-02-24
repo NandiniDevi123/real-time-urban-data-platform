@@ -12,4 +12,5 @@ class AgentResponse(BaseModel):
     intent: str
     plan: List[ToolCall]
     message: str
+    tool_results: Optional[List[Dict[str, Any]]] = None
     notes: Optional[str] = None
